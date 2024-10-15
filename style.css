@@ -6,3 +6,8 @@ body {
 canvas {
   display: block; /* Убираем пробелы */
 }
+
+#scorePanel {
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+}

@@ -6,8 +6,9 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 // Сцена и камера
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(1.8, 10, 11);
-camera.lookAt(0, 0, 0);
+camera.position.set(0, 10, 11); // Попробуйте увеличить Y и уменьшить Z
+camera.lookAt(0, 0, 0); // Убедитесь, что камера смотрит в центр сцены
+
 
 // Рендерер
 const canvas = document.getElementById('gameCanvas');
@@ -40,6 +41,15 @@ class Road extends THREE.Mesh {
 const road = new Road();
 scene.add(road);
 
+//score 
+let score = 0; // Переменная для хранения счета
+
+function updateScoreDisplay() {
+  const scoreDisplay = document.getElementById('scoreValue');
+  scoreDisplay.textContent = score; // Обновляем текст на панели со счетом
+}
+
+
 // Зелёный куб (игрок)
 class Player extends THREE.Mesh {
   constructor() {
@@ -70,70 +80,57 @@ class Obstacle extends THREE.Mesh {
 
     const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
 
+    // Сохраняем шрифт для последующего обновления текста
+    this.font = font;
+
+    // Инициализация значения текста
+    this.currentTextValue = 2; // Начальное значение текста
+
     // Текст на лицевой грани куба
-    const frontTextGeometry = new TextGeometry('2', {
+    this.frontTextGeometry = new TextGeometry(this.currentTextValue.toString(), {
       font: font,
       size: 0.8,
       depth: 0.1,
     });
-    const frontTextMesh = new THREE.Mesh(frontTextGeometry, textMaterial);
-    frontTextMesh.position.set(-0.3, -0.3, 0.5); // Центрируем текст на передней грани
-    frontTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст, чтобы покрывал почти всю грань
-    this.add(frontTextMesh);
+    this.frontTextMesh = new THREE.Mesh(this.frontTextGeometry, textMaterial);
+    this.frontTextMesh.position.set(-0.3, -0.3, 0.5);
+    this.frontTextMesh.scale.set(0.95, 0.95, 1);
+    this.add(this.frontTextMesh);
 
     // Текст на верхней грани куба
-    const topTextGeometry = new TextGeometry('2', {
+    this.topTextGeometry = new TextGeometry(this.currentTextValue.toString(), {
       font: font,
-      size: 0.8, // Увеличиваем размер текста до 1
-      depth: 0.05, // Толщина текста
+      size: 0.8,
+      depth: 0.05,
     });
-    const topTextMesh = new THREE.Mesh(topTextGeometry, textMaterial);
-
-    // Позиционируем текст на верхней грани
-    topTextMesh.rotation.x = -Math.PI / 2; // Поворачиваем текст, чтобы он лежал на верхней грани
-    topTextMesh.position.set(-0.3, 0.51, 0.4); // Центрируем текст на верхней грани
-    topTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст для покрытия всей верхней грани
-    this.add(topTextMesh);
+    this.topTextMesh = new THREE.Mesh(this.topTextGeometry, textMaterial);
+    this.topTextMesh.rotation.x = -Math.PI / 2;
+    this.topTextMesh.position.set(-0.3, 0.51, 0.4);
+    this.topTextMesh.scale.set(0.95, 0.95, 1);
+    this.add(this.topTextMesh);
   }
 
-  // Метод для обновления значения текста на кубе
-  updateText(newValue, font) {
-  const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
+  // Метод для обновления значения текста
+  updateText(newValue) {
+    // Обновляем передний текст
+    this.frontTextGeometry.dispose(); // Удаляем старую геометрию
+    this.frontTextGeometry = new TextGeometry(newValue.toString(), {
+      font: this.font,
+      size: 0.8,
+      depth: 0.1,
+    });
+    this.frontTextMesh.geometry = this.frontTextGeometry; // Заменяем геометрию меша
 
-  // Удаляем старые текстовые объекты
-  this.children.forEach((child) => {
-    if (child.geometry instanceof TextGeometry) {
-      this.remove(child);
-      child.geometry.dispose(); // Освобождаем ресурсы
-      child.material.dispose(); // Освобождаем материалы
-    }
-  });
-
-  // Создаем новый текст для передней грани
-  const frontTextGeometry = new TextGeometry(newValue.toString(), {
-    font: font,
-    size: 0.8,
-    depth: 0.1,
-  });
-  const frontTextMesh = new THREE.Mesh(frontTextGeometry, textMaterial);
-  frontTextMesh.position.set(-0.3, -0.3, 0.5); // Центрируем текст на передней грани
-  frontTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст
-  this.add(frontTextMesh);
-
-  // Создаем новый текст для верхней грани
-  const topTextGeometry = new TextGeometry(newValue.toString(), {
-    font: font,
-    size: 0.8, // Размер текста
-    depth: 0.05, // Толщина текста
-  });
-  const topTextMesh = new THREE.Mesh(topTextGeometry, textMaterial);
-  topTextMesh.rotation.x = -Math.PI / 2; // Поворачиваем текст для верхней грани
-  topTextMesh.position.set(-0.3, 0.51, 0.4); // Центрируем текст на верхней грани
-  topTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст для покрытия всей верхней грани
-  this.add(topTextMesh);
+    // Обновляем верхний текст
+    this.topTextGeometry.dispose(); // Удаляем старую геометрию
+    this.topTextGeometry = new TextGeometry(newValue.toString(), {
+      font: this.font,
+      size: 0.8,
+      depth: 0.05,
+    });
+    this.topTextMesh.geometry = this.topTextGeometry; // Заменяем геометрию меша
   }
 }
-
 
 // Загрузка шрифта и создание препятствий
 let font;
@@ -216,7 +213,6 @@ function checkCollision(bullet, obstacle) {
   return distance < 1; // Если расстояние меньше 1, значит произошло столкновение
 }
 
-// Обновление текста на кубе при столкновении
 function animate() {
   requestAnimationFrame(animate);
 
@@ -225,38 +221,46 @@ function animate() {
 
   // Обновляем положение препятствий
   obstacles.forEach(obstacle => {
-    // Двигаем препятствия к игроку по оси Z
     obstacle.position.z += 0.1;
 
     // Проверка столкновений с игроком
     if (Math.abs(obstacle.position.x - player.position.x) < 1 &&
         Math.abs(obstacle.position.z - player.position.z) < 1) {
       console.log('Столкновение с игроком!');
-      // Перемещаем куб назад после столкновения
       obstacle.position.z = player.position.z + 60;
+      // Увеличиваем общий счет
+      score += obstacle.currentTextValue; 
+      updateScoreDisplay(); // Обновляем отображение счета
     }
   });
 
   // Обновляем положение синих сфер
   bullets.forEach((bullet, index) => {
-    bullet.update(); // Обновляем позицию сферы
+    bullet.update();
 
     // Проверяем столкновения с каждым препятствием
     obstacles.forEach(obstacle => {
       if (checkCollision(bullet, obstacle)) {
         console.log('Столкновение сферы с препятствием!');
-
-        // Увеличиваем значение на кубе на 1
-        const currentText = parseInt(obstacle.children[0].geometry.parameters.text) || 0; // Сначала проверяем, если значение text существует
-        obstacle.updateText(currentText + 1, font); // Обновляем текст с учетом загруженного шрифта
-
+    
+        // Если у препятствия ещё нет текста, установим начальное значение 2
+        if (!obstacle.currentTextValue) {
+            obstacle.currentTextValue = 2;
+        } else {
+            obstacle.currentTextValue += 1; // Увеличиваем текущее значение текста на 1
+        }
+    
+        // Обновляем текст на кубе
+        obstacle.updateText(obstacle.currentTextValue);
+    
         // Убираем сферу после столкновения
         scene.remove(bullet);
         bullets.splice(index, 1);
-      }
+    }
+    
     });
 
-    // Если сфера ушла далеко, удаляем её из сцены
+    // Если сфера ушла далеко, удаляем её
     if (bullet.position.z < player.position.z - 100) {
       scene.remove(bullet);
       bullets.splice(index, 1);
@@ -266,6 +270,5 @@ function animate() {
   // Рендер сцены
   renderer.render(scene, camera);
 }
-
 
 animate();
