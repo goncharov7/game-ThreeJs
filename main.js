@@ -1,135 +1,271 @@
-import { OrbitControls } from 'three/examples/jsm/Addons.js';
-import './style.css'
 import * as THREE from 'three';
-import * as CANNON from "cannon-es";
-import CannonDebugger from 'cannon-es-debugger';
-//variables
-const pointsUI = document.querySelector("#points");
-let points = 0;
-const randomRenge = (max, min) => {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-}
-const moveObsatcles = (arr, speed, maxX, minX, maxZ, minZ) => {
-  arr.forEach(el => {
-    el.body.position.z += speed;
-    if(el.body.position.z > camera.position.z) {
-      el.body.position.x = randomRenge(maxX, minX);
-      el.body.position.z = randomRenge(maxZ, minZ);
-    }
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 
-    el.mesh.position.copy(el.body.position);
-    el.mesh.quaternion.copy(el.body.quaternion);
-  });
-}
-
-//scene setup
+// Сцена и камера
 const scene = new THREE.Scene();
-const world = new CANNON.World({
-  gravity: new CANNON.Vec3(0, -9.82, 0)
-})
-const cannonDebugger = new CannonDebugger(scene, world, {
-  color: "#AEE2ff",
-  scale: 1,
-});
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.z = 4.5;
-camera.position.y = 1.5;
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(1.8, 10, 11);
+camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.setAnimationLoop( animate );
-document.body.appendChild( renderer.domElement );
+// Рендерер
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
 
-//controls
-const controls = new OrbitControls(camera, renderer.domElement);
+renderer.shadowMap.enabled = true;
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-//ground
-const groundBody = new CANNON.Body({
-  shape: new CANNON.Box (new CANNON.Vec3(15, 0.5, 15)),
-});
-world.addBody(groundBody);
-
-const ground = new THREE.Mesh( new THREE.BoxGeometry( 30, 1, 30 ), new THREE.MeshBasicMaterial( { color: 0x00ff00 } ) );
-ground.position.y = -1;
-scene.add( ground );
-
-//player
-const playerBody = new CANNON.Body({
-  shape: new CANNON.Box (new CANNON.Vec3(0.25, 0.25, 0.25)),
-  fixedRotation: true
-});
-world.addBody(playerBody);
-
-const player = new THREE.Mesh( new THREE.BoxGeometry( 0.5, 0.5, 0.5 ), new THREE.MeshBasicMaterial( { color: 0xff0000 } ) );
-scene.add( player );
-
-//powerUp
-const powerUps = [];
-for (let i = 0; i<10; i++){
-  const posX = randomRenge(8, -8);
-  const posZ = randomRenge(-5, -10);
-
-  const powerUp = new THREE.Mesh(
-    new THREE.TorusGeometry(1, 0.4, 16, 50),
-    new THREE.MeshBasicMaterial({color: 0xffff00})
-  )
-  powerUp.scale.set(0.1, 0.1, 0.1);
-  powerUp.position.x = posX;
-  powerUp.position.z = posZ;
-
-  powerUp.name = "powerUp" + [i+1];
-  scene.add(powerUp);
-
-  const powerUpBody = new CANNON.Body({
-    shape: new CANNON.Sphere(0.2)
-  });
-  powerUpBody.position.set(posX, 0, posZ);
-  world.addBody(powerUpBody);
-
-  const powerUpObject = {
-    mesh: powerUp,
-    body: powerUpBody
-  }
-
-  powerUps.push(powerUpObject);
-}
-
-//grid helper -> delete
-// const gridHelper = new THREE.GridHelper(30, 30);
-// scene.add(gridHelper);
-
-function animate() {
-  requestAnimationFrame(animate);
-  moveObsatcles(powerUps, 0.001, 8, -8, -5, -10);
-  controls.update();
-  world.fixedStep();
-  player.position.copy(playerBody.position);
-  player.quaternion.copy(playerBody.quaternion);
-  cannonDebugger.update();
-	renderer.render( scene, camera );
-}
-
-animate();
-
-window.addEventListener("resize", ()=> {
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-})
-
-//player moving
-window.addEventListener("keydown", (e)=>{
-  switch (e.key) {
-    case "d"|| "D" || "ArrowRight":
-      playerBody.position.x += 0.1;
-      break;
-    case "a"|| "A" || "ArrowLeft":
-      playerBody.position.x -= 0.1;
-      break;
-  }
-  if (e.key === "r" || e.key === "R"){
-    playerBody.position.x = 0;
-    playerBody.position.y = 0;
-    playerBody.position.z = 0;
-  }
 });
+
+// Управление камерой
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// Дорога
+class Road extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.PlaneGeometry(10, 800);
+    const material = new THREE.MeshStandardMaterial({ color: '#808080' });
+    super(geometry, material);
+    this.rotation.x = -Math.PI / 2;
+    this.position.y = -0.5;
+  }
+}
+
+const road = new Road();
+scene.add(road);
+
+// Зелёный куб (игрок)
+class Player extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial({ color: '#00ff00' });
+    super(geometry, material);
+    this.position.y = 0.5;
+  }
+
+  move(x) {
+    this.position.x = THREE.MathUtils.clamp(x, -4.5, 4.5);
+  }
+}
+
+const player = new Player();
+scene.add(player);
+
+// Объявление массива obstacles
+const obstacles = [];
+
+// Препятствия (красные кубы)
+class Obstacle extends THREE.Mesh {
+  constructor(x, z, font) {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 'red' });
+    super(geometry, material);
+    this.position.set(x, 0.5, z);
+
+    const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
+
+    // Текст на лицевой грани куба
+    const frontTextGeometry = new TextGeometry('2', {
+      font: font,
+      size: 0.8,
+      depth: 0.1,
+    });
+    const frontTextMesh = new THREE.Mesh(frontTextGeometry, textMaterial);
+    frontTextMesh.position.set(-0.3, -0.3, 0.5); // Центрируем текст на передней грани
+    frontTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст, чтобы покрывал почти всю грань
+    this.add(frontTextMesh);
+
+    // Текст на верхней грани куба
+    const topTextGeometry = new TextGeometry('2', {
+      font: font,
+      size: 0.8, // Увеличиваем размер текста до 1
+      depth: 0.05, // Толщина текста
+    });
+    const topTextMesh = new THREE.Mesh(topTextGeometry, textMaterial);
+
+    // Позиционируем текст на верхней грани
+    topTextMesh.rotation.x = -Math.PI / 2; // Поворачиваем текст, чтобы он лежал на верхней грани
+    topTextMesh.position.set(-0.3, 0.51, 0.4); // Центрируем текст на верхней грани
+    topTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст для покрытия всей верхней грани
+    this.add(topTextMesh);
+  }
+
+  // Метод для обновления значения текста на кубе
+  updateText(newValue, font) {
+  const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
+
+  // Удаляем старые текстовые объекты
+  this.children.forEach((child) => {
+    if (child.geometry instanceof TextGeometry) {
+      this.remove(child);
+      child.geometry.dispose(); // Освобождаем ресурсы
+      child.material.dispose(); // Освобождаем материалы
+    }
+  });
+
+  // Создаем новый текст для передней грани
+  const frontTextGeometry = new TextGeometry(newValue.toString(), {
+    font: font,
+    size: 0.8,
+    depth: 0.1,
+  });
+  const frontTextMesh = new THREE.Mesh(frontTextGeometry, textMaterial);
+  frontTextMesh.position.set(-0.3, -0.3, 0.5); // Центрируем текст на передней грани
+  frontTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст
+  this.add(frontTextMesh);
+
+  // Создаем новый текст для верхней грани
+  const topTextGeometry = new TextGeometry(newValue.toString(), {
+    font: font,
+    size: 0.8, // Размер текста
+    depth: 0.05, // Толщина текста
+  });
+  const topTextMesh = new THREE.Mesh(topTextGeometry, textMaterial);
+  topTextMesh.rotation.x = -Math.PI / 2; // Поворачиваем текст для верхней грани
+  topTextMesh.position.set(-0.3, 0.51, 0.4); // Центрируем текст на верхней грани
+  topTextMesh.scale.set(0.95, 0.95, 1); // Масштабируем текст для покрытия всей верхней грани
+  this.add(topTextMesh);
+  }
+}
+
+
+// Загрузка шрифта и создание препятствий
+let font;
+
+const fontLoader = new FontLoader();
+fontLoader.load('./public/font/helvetiker_bold.typeface.json', (font) => {
+  createObstacles(font);
+});
+
+// Создаем 3 ряда по 2 куба
+const createObstacles = (font) => {
+  const startZ = -50; // Начальная позиция по Z
+  const spacing = 10; // Расстояние между рядами
+  const rowOffset = 3; // Расстояние между кубами в ряду
+
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 2; col++) {
+      const x = (col - 0.5) * rowOffset * 2; // Позиционируем кубы
+      const z = startZ + row * spacing; // Расстояние между рядами
+      const obstacle = new Obstacle(x, z, font); // Создание препятствия
+      obstacles.push(obstacle);
+      scene.add(obstacle); // Добавляем препятствие в сцену
+    }
+  }
+};
+
+// Свет
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(0, 5, 5);
+scene.add(light);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+// Управление мышью
+let mouseX = 0;
+window.addEventListener('mousemove', (event) => {
+  mouseX = (event.clientX / window.innerWidth) * 10 - 5;
+});
+
+// Управление касанием (для телефона)
+window.addEventListener('touchmove', (event) => {
+  const touch = event.touches[0];
+  mouseX = (touch.clientX / window.innerWidth) * 10 - 5;
+});
+
+// Сфера (снаряд)
+class BlueSphere extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ color: 'blue' });
+    super(geometry, material);
+    this.velocity = new THREE.Vector3(0, 0, -1); // Задаем начальную скорость сферы
+  }
+
+  // Метод для обновления позиции сферы
+  update() {
+    this.position.add(this.velocity);
+  }
+}
+
+// Массив для хранения снарядов
+const bullets = [];
+
+// Функция стрельбы синими сферами
+function shoot() {
+  const bullet = new BlueSphere();
+  bullet.position.set(player.position.x, player.position.y, player.position.z); // Стартовая позиция сферы - позиция игрока
+  bullets.push(bullet); // Добавляем сферу в массив
+  scene.add(bullet); // Добавляем сферу в сцену
+}
+
+// Запускаем автоматическую стрельбу
+setInterval(() => {
+  shoot(); // Вызываем функцию стрельбы
+}, 1000); // Интервал в 1000 мс (1 секунда)
+
+// Функция для проверки столкновений сферы с препятствием
+function checkCollision(bullet, obstacle) {
+  const distance = bullet.position.distanceTo(obstacle.position);
+  return distance < 1; // Если расстояние меньше 1, значит произошло столкновение
+}
+
+// Обновление текста на кубе при столкновении
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Двигаем игрока по X на основе позиции мыши
+  player.move(mouseX);
+
+  // Обновляем положение препятствий
+  obstacles.forEach(obstacle => {
+    // Двигаем препятствия к игроку по оси Z
+    obstacle.position.z += 0.1;
+
+    // Проверка столкновений с игроком
+    if (Math.abs(obstacle.position.x - player.position.x) < 1 &&
+        Math.abs(obstacle.position.z - player.position.z) < 1) {
+      console.log('Столкновение с игроком!');
+      // Перемещаем куб назад после столкновения
+      obstacle.position.z = player.position.z + 60;
+    }
+  });
+
+  // Обновляем положение синих сфер
+  bullets.forEach((bullet, index) => {
+    bullet.update(); // Обновляем позицию сферы
+
+    // Проверяем столкновения с каждым препятствием
+    obstacles.forEach(obstacle => {
+      if (checkCollision(bullet, obstacle)) {
+        console.log('Столкновение сферы с препятствием!');
+
+        // Увеличиваем значение на кубе на 1
+        const currentText = parseInt(obstacle.children[0].geometry.parameters.text) || 0; // Сначала проверяем, если значение text существует
+        obstacle.updateText(currentText + 1, font); // Обновляем текст с учетом загруженного шрифта
+
+        // Убираем сферу после столкновения
+        scene.remove(bullet);
+        bullets.splice(index, 1);
+      }
+    });
+
+    // Если сфера ушла далеко, удаляем её из сцены
+    if (bullet.position.z < player.position.z - 100) {
+      scene.remove(bullet);
+      bullets.splice(index, 1);
+    }
+  });
+
+  // Рендер сцены
+  renderer.render(scene, camera);
+}
+
+
+animate();
