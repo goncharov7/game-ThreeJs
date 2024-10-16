@@ -72,10 +72,10 @@ const obstacles = [];
 
 // Препятствия (красные кубы)
 class Obstacle extends THREE.Mesh {
-  constructor(x, z, font) {
+  constructor(x, z, font, material) {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({ color: 'red' });
-    super(geometry, material);
+    // Используем переданный материал вместо фиксированного красного
+    super(geometry, material); 
     this.position.set(x, 0.5, z);
 
     const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
@@ -140,21 +140,41 @@ fontLoader.load('./public/font/helvetiker_bold.typeface.json', (font) => {
   createObstacles(font);
 });
 
-// Создаем 3 ряда по 2 куба
 const createObstacles = (font) => {
   const startZ = -50; // Начальная позиция по Z
-  const spacing = 10; // Расстояние между рядами
-  const rowOffset = 3; // Расстояние между кубами в ряду
+  const wallZ = startZ - 21; // Позиция для стены
 
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 2; col++) {
-      const x = (col - 0.5) * rowOffset * 2; // Позиционируем кубы
-      const z = startZ + row * spacing; // Расстояние между рядами
-      const obstacle = new Obstacle(x, z, font); // Создание препятствия
-      obstacles.push(obstacle);
-      scene.add(obstacle); // Добавляем препятствие в сцену
-    }
-  }
+  // Создаем зелёный куб со значением 4
+  const greenMaterial = new THREE.MeshStandardMaterial({ color: '#00ff00' }); // Задаем зелёный цвет
+  const greenObstacle = new Obstacle(-2, startZ, font, greenMaterial); // Передаем материал кубу
+  greenObstacle.currentTextValue = 4; // Устанавливаем значение
+  greenObstacle.updateText(greenObstacle.currentTextValue);
+  obstacles.push(greenObstacle);
+  scene.add(greenObstacle);
+
+  // Создаем жёлтый куб со значением 8
+  const yellowMaterial = new THREE.MeshStandardMaterial({ color: '#ffff00' }); // Задаем жёлтый цвет
+  const yellowObstacle = new Obstacle(2, startZ, font, yellowMaterial); // Передаем материал кубу
+  yellowObstacle.currentTextValue = 8; // Устанавливаем значение
+  yellowObstacle.updateText(yellowObstacle.currentTextValue);
+  obstacles.push(yellowObstacle);
+  scene.add(yellowObstacle);
+
+  // Создаем прозрачную зелёную стену
+  const wallGeometry = new THREE.BoxGeometry(10, 3, 0.10); // Размеры стены
+  const wallMaterial = new THREE.MeshStandardMaterial({ 
+    color: '#00ff00', 
+    transparent: true,  
+    opacity: 0.5       
+  });
+  const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+  wall.position.set(0, 1, wallZ);
+  scene.add(wall);
+
+  // Добавляем логику столкновения со стеной
+  wall.userData.isWall = true; // Помечаем стену для проверки столкновений
+  wall.userData.shouldRemove = true; // Удаляем стену при столкновении
+  obstacles.push(wall); // Добавляем стену в массив препятствий
 };
 
 // Свет
@@ -213,6 +233,10 @@ function checkCollision(bullet, obstacle) {
   return distance < 1; // Если расстояние меньше 1, значит произошло столкновение
 }
 
+function increasePlayerSize() {
+  player.scale.multiplyScalar(1.25); // Увеличиваем размер в 1.25 раза
+}
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -226,11 +250,24 @@ function animate() {
     // Проверка столкновений с игроком
     if (Math.abs(obstacle.position.x - player.position.x) < 1 &&
         Math.abs(obstacle.position.z - player.position.z) < 1) {
+      
+      // Если это зелёная стена, увеличиваем куб игрока
+      if (obstacle.userData.isWall) {
+        increasePlayerSize();
+        // Убираем стену после столкновения
+        if (obstacle.userData.shouldRemove) {
+          scene.remove(obstacle);
+        }
+      }
+
       console.log('Столкновение с игроком!');
       obstacle.position.z = player.position.z + 60;
+
       // Увеличиваем общий счет
-      score += obstacle.currentTextValue; 
-      updateScoreDisplay(); // Обновляем отображение счета
+      if (obstacle.currentTextValue) {
+        score += obstacle.currentTextValue; 
+        updateScoreDisplay(); // Обновляем отображение счета
+      }
     }
   });
 
@@ -245,19 +282,18 @@ function animate() {
     
         // Если у препятствия ещё нет текста, установим начальное значение 2
         if (!obstacle.currentTextValue) {
-            obstacle.currentTextValue = 2;
+          obstacle.currentTextValue = 2;
         } else {
-            obstacle.currentTextValue += 1; // Увеличиваем текущее значение текста на 1
+          obstacle.currentTextValue += 1; // Увеличиваем текущее значение текста на 1
         }
-    
+
         // Обновляем текст на кубе
         obstacle.updateText(obstacle.currentTextValue);
-    
+
         // Убираем сферу после столкновения
         scene.remove(bullet);
         bullets.splice(index, 1);
-    }
-    
+      }
     });
 
     // Если сфера ушла далеко, удаляем её
