@@ -56,7 +56,7 @@ class Player extends THREE.Mesh {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshStandardMaterial({ color: '#00ff00' });
     super(geometry, material);
-    this.position.y = 0.5;
+    this.position.y = 0;
   }
 
   move(x) {
@@ -76,7 +76,7 @@ class Obstacle extends THREE.Mesh {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     // Используем переданный материал вместо фиксированного красного
     super(geometry, material); 
-    this.position.set(x, 0.5, z);
+    this.position.set(x, 0, z);
 
     const textMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
 
@@ -142,9 +142,10 @@ fontLoader.load('./public/font/helvetiker_bold.typeface.json', (font) => {
 
 const createObstacles = (font) => {
   const startZ = -50; // Начальная позиция по Z
+  const secondPairDistance = -40; // Начальная позиция по Z
   const wallZ = startZ - 21; // Позиция для стены
-
-  // Создаем зелёный куб со значением 4
+  
+  //FISRT PAIR
   const greenMaterial = new THREE.MeshStandardMaterial({ color: '#00ff00' }); // Задаем зелёный цвет
   const greenObstacle = new Obstacle(-2, startZ, font, greenMaterial); // Передаем материал кубу
   greenObstacle.currentTextValue = 4; // Устанавливаем значение
@@ -152,13 +153,27 @@ const createObstacles = (font) => {
   obstacles.push(greenObstacle);
   scene.add(greenObstacle);
 
-  // Создаем жёлтый куб со значением 8
   const yellowMaterial = new THREE.MeshStandardMaterial({ color: '#ffff00' }); // Задаем жёлтый цвет
   const yellowObstacle = new Obstacle(2, startZ, font, yellowMaterial); // Передаем материал кубу
   yellowObstacle.currentTextValue = 8; // Устанавливаем значение
   yellowObstacle.updateText(yellowObstacle.currentTextValue);
   obstacles.push(yellowObstacle);
   scene.add(yellowObstacle);
+
+  //SECOND PAIR
+  const green2Obstacle = new Obstacle(-2, secondPairDistance, font, new THREE.MeshStandardMaterial({ color: '#00ff00' })); // Передаем материал кубу
+  green2Obstacle.currentTextValue = 4; // Устанавливаем значение
+  green2Obstacle.updateText(green2Obstacle.currentTextValue);
+  obstacles.push(green2Obstacle);
+  scene.add(green2Obstacle);
+
+  // Создаем жёлтый куб со значением 8
+  const yellow2Material = new THREE.MeshStandardMaterial({ color: '#ffff00' }); // Задаем жёлтый цвет
+  const yellow2Obstacle = new Obstacle(2, secondPairDistance, font, yellow2Material); // Передаем материал кубу
+  yellow2Obstacle.currentTextValue = 8; // Устанавливаем значение
+  yellow2Obstacle.updateText(yellow2Obstacle.currentTextValue);
+  obstacles.push(yellow2Obstacle);
+  scene.add(yellow2Obstacle);
 
   // Создаем прозрачную зелёную стену
   const wallGeometry = new THREE.BoxGeometry(10, 3, 0.10); // Размеры стены
