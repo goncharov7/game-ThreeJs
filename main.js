@@ -54,7 +54,7 @@ function updateScoreDisplay() {
 class Player extends THREE.Mesh {
   constructor() {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({ color: '#00ff00' });
+    const material = new THREE.MeshStandardMaterial({ color: '#808' });
     super(geometry, material);
     this.position.y = 0;
   }
@@ -248,9 +248,20 @@ function checkCollision(bullet, obstacle) {
   return distance < 1; // Если расстояние меньше 1, значит произошло столкновение
 }
 
+function checkCollisionBoundingBox(player, obstacle) {
+  // Создаем bounding box для игрока и препятствия
+  const playerBox = new THREE.Box3().setFromObject(player);
+  const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+
+  // Проверяем пересечение двух bounding box
+  return playerBox.intersectsBox(obstacleBox);
+}
+
 function increasePlayerSize() {
   player.scale.multiplyScalar(1.25); // Увеличиваем размер в 1.25 раза
 }
+
+
 
 function animate() {
   requestAnimationFrame(animate);
@@ -260,31 +271,29 @@ function animate() {
 
   // Обновляем положение препятствий
   obstacles.forEach(obstacle => {
-    obstacle.position.z += 0.1;
+    obstacle.position.z += 0.15;
 
-    // Проверка столкновений с игроком
-    if (Math.abs(obstacle.position.x - player.position.x) < 1 &&
-        Math.abs(obstacle.position.z - player.position.z) < 1) {
-      
-      // Если это зелёная стена, увеличиваем куб игрока
-      if (obstacle.userData.isWall) {
-        increasePlayerSize();
-        // Убираем стену после столкновения
-        if (obstacle.userData.shouldRemove) {
-          scene.remove(obstacle);
+    // Проверка столкновений с игроком с использованием bounding box
+    if (checkCollisionBoundingBox(player, obstacle)) {
+        console.log('Столкновение с игроком!');
+
+        // Обрабатываем логику столкновения
+        if (obstacle.userData.isWall) {
+            increasePlayerSize();
+            if (obstacle.userData.shouldRemove) {
+                scene.remove(obstacle);
+            }
         }
-      }
 
-      console.log('Столкновение с игроком!');
-      obstacle.position.z = player.position.z + 60;
+        obstacle.position.z = player.position.z + 60;
 
-      // Увеличиваем общий счет
-      if (obstacle.currentTextValue) {
-        score += obstacle.currentTextValue; 
-        updateScoreDisplay(); // Обновляем отображение счета
-      }
+        if (obstacle.currentTextValue) {
+            score += obstacle.currentTextValue;
+            updateScoreDisplay();
+        }
     }
-  });
+});
+
 
   // Обновляем положение синих сфер
   bullets.forEach((bullet, index) => {
