@@ -175,21 +175,34 @@ const createObstacles = (font) => {
   obstacles.push(yellow2Obstacle);
   scene.add(yellow2Obstacle);
 
-  // Создаем прозрачную зелёную стену
-  const wallGeometry = new THREE.BoxGeometry(10, 3, 0.10); // Размеры стены
-  const wallMaterial = new THREE.MeshStandardMaterial({ 
-    color: '#00ff00', 
-    transparent: true,  
-    opacity: 0.5       
-  });
-  const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-  wall.position.set(0, 1, wallZ);
-  scene.add(wall);
+// Создание прозрачной зелёной стены
+const wallGeometry = new THREE.BoxGeometry(10, 3, 0.10); // Размеры стены
+const wallMaterial = new THREE.MeshStandardMaterial({ 
+  color: '#00ff00', 
+  transparent: true,  
+  opacity: 0.5       
+});
+const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+wall.position.set(0, 1, wallZ);
+scene.add(wall);
 
-  // Добавляем логику столкновения со стеной
-  wall.userData.isWall = true; // Помечаем стену для проверки столкновений
-  wall.userData.shouldRemove = true; // Удаляем стену при столкновении
-  obstacles.push(wall); // Добавляем стену в массив препятствий
+const wallTextMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
+
+const wallTextGeometry = new TextGeometry("UPDATE", {
+  font: font, 
+  size: 1.5,  
+  depth: 0.1,
+});
+
+// Создаем меш для текста и позиционируем его
+const wallTextMesh = new THREE.Mesh(wallTextGeometry, wallTextMaterial);
+wallTextMesh.position.set(-4, -0.75, 0.06); // Размещаем текст на стене
+wall.add(wallTextMesh);
+
+// Добавляем логику столкновения со стеной
+wall.userData.isWall = true; // Помечаем стену для проверки столкновений
+wall.userData.shouldRemove = true; // Удаляем стену при столкновении
+obstacles.push(wall); // Добавляем стену в массив препятствий
 };
 
 // Свет
